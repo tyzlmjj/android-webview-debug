@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">barcode-reader</string>
+
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="activity_horizontal_margin">16dp</dimen>
+    <dimen name="activity_vertical_margin">16dp</dimen>
+
+    <item name="decode" type="id"/>
+    <item name="decode_camera_data_vertical" type="id"/>
+    <item name="quit" type="id"/>
+    <item name="decode_succeeded" type="id"/>
+    <item name="decode_failed" type="id"/>
+
+    <string name="scan_hint">Place the code inside the frame</string>
+    <string name="scan_light">Lighting</string>
+    <string name="no_rear_camera">Rear camera does not exist or can not be used</string>
+
+    <string name="notice">Notice</string>
+    <string name="dialog_hint_camera_permission">You need to approve camera permissions to scan code</string>
+    <string name="hint_no_camera_permission">You have denied camera permissions and cannot use scan codes</string>
+
+    <style name="ScanTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!--<item name="colorPrimary">#414141</item>-->
+        <!--<item name="colorPrimaryDark">#313131</item>-->
+    </style>
+
+</resources>

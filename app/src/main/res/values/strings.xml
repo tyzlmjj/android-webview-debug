@@ -1,3 +1,14 @@
 <resources>
-    <string name="app_name">Android WebView Debug</string>
+    <string name="app_name">WebView Debug</string>
+
+    <string name="url_text">网页由 %s 提供</string>
+    <string name="webview_version_text">WebView %s</string>
+
+    <string name="hint_copy_empty">链接地址为空</string>
+    <string name="hint_copy_succeed">链接已复制到剪切板</string>
+    <string name="hint_copy_failed">复制链接失败</string>
+
+    <string name="location_dialog_title">地理位置授权</string>
+    <string name="location_dialog_message">允许%s访问你当前的地理位置信息？</string>
+    <string name="location_permission_hint">网页需要获取[位置权限]</string>
 </resources>

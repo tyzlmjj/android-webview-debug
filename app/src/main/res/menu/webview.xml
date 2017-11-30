@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_reload"
+        app:showAsAction="never"
+        android:title="重新加载当前页"
+        />
+    <item
+        android:id="@+id/action_copy"
+        app:showAsAction="never"
+        android:title="复制网页地址"
+        />
+    <item
+        android:id="@+id/action_scan"
+        app:showAsAction="never"
+        android:title="扫二维码"
+        />
+    <item
+        android:id="@+id/action_setting"
+        app:showAsAction="never"
+        android:title="设置"
+        />
+</menu>
