@@ -23,9 +23,10 @@ import android.webkit.WebViewClient;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import me.majiajie.barcodereader.BarcodeFormat;
 import me.majiajie.barcodereader.ScanActivity;
 import me.majiajie.barcodereader.decode.DecodeResult;
-import me.majiajie.barcodereader.ui.RequestPermissionFragment;
+import me.majiajie.barcodereader.helper.RequestPermissionFragment;
 
 public class WebViewActivity extends AppCompatActivity implements RequestPermissionFragment.RequestPermissionsCallback {
 
@@ -104,7 +105,7 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
                 copyUrl();
                 return true;
             case R.id.action_scan://扫二维码
-                ScanActivity.startActivityForResult(this);
+                ScanActivity.startActivityForResult(this,0,new int[]{BarcodeFormat.QR_CODE});
                 return true;
             case R.id.action_setting://设置
                 return true;
