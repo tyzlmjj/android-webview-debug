@@ -20,7 +20,7 @@ import static android.view.MotionEvent.INVALID_POINTER_ID;
 public class PullDownLayout extends FrameLayout {
 
     /**
-     * 手指下拉临界点
+     * 判断手指是否下拉的临界点
      */
     private final int SLOP = 8;
 
@@ -86,7 +86,6 @@ public class PullDownLayout extends FrameLayout {
                 break;
             }
         }
-
         if (mPullDownChildView == null){
             throw new ClassCastException("should be a child implements PullDownChild");
         }
@@ -140,9 +139,8 @@ public class PullDownLayout extends FrameLayout {
                 break;
             }
         }
+
         if (isMoreDown && mPullDownChild.isTop()){
-            // 置0
-            mTmpY = 0f;
             // 暂停可能存在的回复动画
             ValueAnimator animator = getGoBackAnim();
             if (animator.isStarted()){
@@ -154,7 +152,7 @@ public class PullDownLayout extends FrameLayout {
         }
     }
 
-    // 记录手指在Y轴上的移动距离
+    // 记录手指在Y轴上的累计移动距离
     private float mTmpY;
 
     @Override
@@ -180,7 +178,6 @@ public class PullDownLayout extends FrameLayout {
                     // 当滑动回顶部之后不再获取Touch事件
                     shouldMove = mTmpY > 0;
                 }
-
                 mActivePointerId = ev.getPointerId(0);
                 break;
             }
@@ -200,8 +197,9 @@ public class PullDownLayout extends FrameLayout {
                 break;
             }
         }
-        // 如果不需要再拖动，就将视图移回顶部
-        if (!shouldMove){
+
+        if (!shouldMove){// 如果不需要再拖动，就将视图移回顶部
+            mTmpY = 0f;
             goBackTop();
         }
         return shouldMove;
@@ -215,6 +213,7 @@ public class PullDownLayout extends FrameLayout {
             getGoBackAnim().start();
         }
     }
+
     private ValueAnimator mGobackAnimator;
 
     /**

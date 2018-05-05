@@ -1,10 +1,7 @@
 package me.majiajie.androidwebviewdebug;
 
 /**
- * Created by mjj on 2017/11/29
- * <p>
- *     下拉阻尼计算
- * </p>
+ * 下拉阻尼计算
  */
 public class DampingUtils {
 

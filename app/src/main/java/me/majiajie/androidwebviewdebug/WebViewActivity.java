@@ -1,13 +1,17 @@
 package me.majiajie.androidwebviewdebug;
 
 import android.Manifest;
+import android.annotation.TargetApi;
 import android.app.Activity;
+import android.content.ClipData;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.FragmentTransaction;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -16,6 +20,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.webkit.GeolocationPermissions;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -26,12 +31,8 @@ import android.widget.Toast;
 import me.majiajie.barcodereader.BarcodeFormat;
 import me.majiajie.barcodereader.ScanActivity;
 import me.majiajie.barcodereader.decode.DecodeResult;
-import me.majiajie.barcodereader.helper.RequestPermissionFragment;
 
-public class WebViewActivity extends AppCompatActivity implements RequestPermissionFragment.RequestPermissionsCallback {
-
-    private final String REQUEST_LOCATION_PERMISSION_TAG = "REQUEST_LOCATION_PERMISSION_TAG";
-    private final String[] LOCATION_PERMISSION = {Manifest.permission.ACCESS_FINE_LOCATION};
+public class WebViewActivity extends AppCompatActivity{
 
     private Toolbar mToolbar;
     private WebProgressBar mWebProgressBar;
@@ -39,14 +40,33 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
     private TextView mTvWebviewVersion;
     private MyWebView mWebView;
 
-    // 网页请求位置信息时存储的临时变量
-    private String mTmpOrigin;
-    private GeolocationPermissions.Callback mTmpGeolocationCallback;
+    /**
+     * 外部存储权限相关
+     */
+    private final int REQUEST_EXTERNAL_STORAGE_PERMISSION = 122;
+    private final String[] EXTERNAL_STORAGE_PERMISSION = {
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
 
     /**
-     * 请求定位权限的Fragment
+     * 定位权限相关
      */
-    private RequestPermissionFragment mRequestLocationPermission;
+    private final int REQUEST_LOCATION_PERMISSION = 120;
+    private final String[] LOCATION_PERMISSION = {Manifest.permission.ACCESS_FINE_LOCATION};
+
+    /**
+     * 网页请求文件的相关变量（只支持5.0及以上系统）
+     */
+    private final int REQUEST_FILE = 121;
+    private ValueCallback<Uri[]> mWebFilePathCallback21;
+    private Intent mWebFileIntent;
+
+    /**
+     * 网页请求位置信息时存储的临时变量
+     */
+    private String mTmpOrigin;
+    private GeolocationPermissions.Callback mTmpGeolocationCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,30 +79,58 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
         mTvWebviewVersion = findViewById(R.id.tv_webview_version);
         mWebView = findViewById(R.id.webView);
 
-        showToolbar(mToolbar);
+        setSupportActionBar(mToolbar);
 
         configWebView();
 
         // 显示WebView版本
-        mTvWebviewVersion.setText(getString(R.string.webview_version_text,Utils.getWebViewVersion(this)));
-
-        // 添加请求位置权限的Fragment
-        mRequestLocationPermission = (RequestPermissionFragment) getSupportFragmentManager().findFragmentByTag(REQUEST_LOCATION_PERMISSION_TAG);
-        if (mRequestLocationPermission == null){
-            mRequestLocationPermission = RequestPermissionFragment.newInstance(LOCATION_PERMISSION,getString(R.string.location_permission_hint));
-            FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-            transaction.add(mRequestLocationPermission,REQUEST_LOCATION_PERMISSION_TAG).commit();
-        }
+        mTvWebviewVersion.setText(getString(R.string.webview_version_text, Utils.getWebViewVersion(this)));
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == Activity.RESULT_OK){
-            switch (requestCode){
+        if (resultCode == Activity.RESULT_OK) {
+            switch (requestCode) {
                 case ScanActivity.REQUEST_CODE:// 扫码返回
                     DecodeResult decodeResult = ScanActivity.getResult(data);
-                    mWebView.loadUrl(decodeResult.getText());
+                    String urlStr = decodeResult.getText();
+                    if (!TextUtils.isEmpty(urlStr) && urlStr.contains(".")) {
+                        if (urlStr.toLowerCase().startsWith("http")) {
+                            mWebView.loadUrl(urlStr);
+                        } else {
+                            mWebView.loadUrl(String.format("http://%s", urlStr));
+                        }
+                    }
+                    break;
+                case REQUEST_FILE:// 网页请求文件返回（api21以上）
+                    if (mWebFilePathCallback21 != null) {
+                        Uri[] results = null;
+                        if (data != null) {
+                            String dataString = data.getDataString();
+                            ClipData clipData = data.getClipData();
+                            if (clipData != null) {
+                                results = new Uri[clipData.getItemCount()];
+                                for (int i = 0; i < clipData.getItemCount(); i++) {
+                                    ClipData.Item item = clipData.getItemAt(i);
+                                    results[i] = item.getUri();
+                                }
+                            }
+                            if (dataString != null)
+                                results = new Uri[]{Uri.parse(dataString)};
+                        }
+                        mWebFilePathCallback21.onReceiveValue(results);
+                        mWebFilePathCallback21 = null;
+                    }
+                    break;
+            }
+        } else if (resultCode == Activity.RESULT_CANCELED) {
+            switch (requestCode) {
+                case REQUEST_FILE:// 网页请求文件返回（api21以上）
+                    if (mWebFilePathCallback21 != null) {
+                        mWebFilePathCallback21.onReceiveValue(null);
+                        mWebFilePathCallback21 = null;
+                    }
                     break;
             }
         }
@@ -90,14 +138,14 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.webview,menu);
+        getMenuInflater().inflate(R.menu.webview, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int itemId = item.getItemId();
-        switch (itemId){
+        switch (itemId) {
             case R.id.action_reload://重新加载
                 mWebView.reload();
                 return true;
@@ -105,9 +153,11 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
                 copyUrl();
                 return true;
             case R.id.action_scan://扫二维码
-                ScanActivity.startActivityForResult(this,0,new int[]{BarcodeFormat.QR_CODE});
+                ScanActivity.startActivityForResult(this, 0, new int[]{BarcodeFormat.QR_CODE});
                 return true;
             case R.id.action_setting://设置
+//                Intent intent = new Intent(this,SettingsActivity.class);
+//                startActivity(intent);
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -115,7 +165,7 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
 
     @Override
     public void onBackPressed() {
-        if (mWebView.canGoBack()){
+        if (mWebView.canGoBack()) {
             mWebView.goBack();
         } else {
             super.onBackPressed();
@@ -123,9 +173,43 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
     }
 
     @Override
-    public void onRequestPermissionsResult(boolean grantResult) {
-        if (grantResult && !TextUtils.isEmpty(mTmpOrigin) && mTmpGeolocationCallback != null){
-            showWebLocationPermissionsDialog(mTmpOrigin,mTmpGeolocationCallback);
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        boolean grant = true;
+        for (int result : grantResults) {
+            if (result != PackageManager.PERMISSION_GRANTED) {
+                grant = false;
+                break;
+            }
+        }
+
+        switch (requestCode){
+            case REQUEST_EXTERNAL_STORAGE_PERMISSION: {// 外部存储权限
+                if (grant && mWebFileIntent != null) {
+                    startActivityForResult(mWebFileIntent, REQUEST_FILE);
+                } else {
+                    if (mWebFilePathCallback21 != null) {
+                        mWebFilePathCallback21.onReceiveValue(null);
+                        mWebFilePathCallback21 = null;
+                        mWebFileIntent = null;
+                    }
+
+                }
+                break;
+            }
+            case REQUEST_LOCATION_PERMISSION:{// 定位权限
+                if (grant && !TextUtils.isEmpty(mTmpOrigin) && mTmpGeolocationCallback != null) {
+                    showWebLocationPermissionsDialog(mTmpOrigin, mTmpGeolocationCallback);
+                } else {
+                    if (mTmpGeolocationCallback != null){
+                        mTmpGeolocationCallback.invoke(mTmpOrigin,false,false);
+                    }
+                    mTmpGeolocationCallback = null;
+                    mTmpOrigin = null;
+                }
+                break;
+            }
         }
     }
 
@@ -146,6 +230,10 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
         settings.setDisplayZoomControls(false);
         // 允许使用地理位置
         settings.setGeolocationEnabled(true);
+        // 在5.0以上显示HTTP图片
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        }
 
         // 设置 WebViewClient
         mWebView.setWebViewClient(new MyWebViewClient());
@@ -156,9 +244,9 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
     /**
      * 显示网页提供者
      */
-    private void showUrlAuthority(String url){
+    private void showUrlAuthority(String url) {
         Uri uri = Uri.parse(url);
-        mTvUrl.setText(getString(R.string.url_text,uri.getAuthority()));
+        mTvUrl.setText(getString(R.string.url_text, uri.getAuthority()));
     }
 
     /**
@@ -166,54 +254,21 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
      */
     private void copyUrl() {
         String url = mWebView.getUrl();
-        if (TextUtils.isEmpty(url)){
-            Toast.makeText(this,R.string.hint_copy_empty,Toast.LENGTH_SHORT).show();
+        if (TextUtils.isEmpty(url)) {
+            Toast.makeText(this, R.string.hint_copy_empty, Toast.LENGTH_SHORT).show();
             return;
         }
-        if (Utils.copy(this,url)){
-            Toast.makeText(this,R.string.hint_copy_succeed,Toast.LENGTH_SHORT).show();
+        if (Utils.copy(this, url)) {
+            Toast.makeText(this, R.string.hint_copy_succeed, Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(this,R.string.hint_copy_failed,Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    /**
-     * 显示Toolbar
-     */
-    private void showToolbar(Toolbar toolbar) {
-        if (toolbar != null) {
-            setSupportActionBar(toolbar);
-        }
-    }
-
-    private class MyWebChromeClient extends WebChromeClient {
-        @Override
-        public void onReceivedTitle(WebView webView, String s) {
-            super.onReceivedTitle(webView, s);
-            if (TextUtils.isEmpty(s)){//没有标题就显示链接地址
-                mToolbar.setSubtitle(webView.getUrl());
-            } else {//显示标题
-                mToolbar.setSubtitle(s);
-            }
-        }
-        @Override
-        public void onGeolocationPermissionsShowPrompt(String origin,GeolocationPermissions.Callback callback) {
-            if(mRequestLocationPermission.checkPermissions()) {
-                mTmpOrigin = null;
-                mTmpGeolocationCallback = null;
-                showWebLocationPermissionsDialog(origin,callback);
-            } else {
-                mTmpOrigin = origin;
-                mTmpGeolocationCallback = callback;
-                mRequestLocationPermission.requestPermissions();
-            }
+            Toast.makeText(this, R.string.hint_copy_failed, Toast.LENGTH_SHORT).show();
         }
     }
 
     /**
      * 显示网页请求位置信息的Dialog
      */
-    private void showWebLocationPermissionsDialog(final String origin,final GeolocationPermissions.Callback callback) {
+    private void showWebLocationPermissionsDialog(final String origin, final GeolocationPermissions.Callback callback) {
         final boolean remember = false;
         AlertDialog.Builder builder = new AlertDialog.Builder(WebViewActivity.this);
         builder.setTitle(R.string.location_dialog_title);
@@ -235,6 +290,54 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
         alert.show();
     }
 
+    private class MyWebChromeClient extends WebChromeClient {
+
+        @TargetApi(21)
+        @Override
+        public boolean onShowFileChooser(WebView webView,
+                                         ValueCallback<Uri[]> filePathCallback,
+                                         WebChromeClient.FileChooserParams fileChooserParams) {
+            mWebFilePathCallback21 = filePathCallback;
+            if (Utils.checkPermissions(WebViewActivity.this,EXTERNAL_STORAGE_PERMISSION)){
+                startActivityForResult(fileChooserParams.createIntent(), REQUEST_FILE);
+            } else {
+                mWebFileIntent = fileChooserParams.createIntent();
+                Utils.requestPermissions(WebViewActivity.this,
+                        EXTERNAL_STORAGE_PERMISSION,REQUEST_EXTERNAL_STORAGE_PERMISSION
+                ,"权限提醒","需要[读写手机存储]的权限才能使用此功能");
+            }
+            return true;
+        }
+
+        @Override
+        public void onReceivedTitle(WebView webView, String s) {
+            super.onReceivedTitle(webView, s);
+            if (TextUtils.isEmpty(s)) {//没有标题就显示链接地址
+                mToolbar.setSubtitle(webView.getUrl());
+            } else {//显示标题
+                mToolbar.setSubtitle(s);
+            }
+        }
+
+        @Override
+        public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+
+
+            if (Utils.checkPermissions(WebViewActivity.this,LOCATION_PERMISSION)) {
+                // 有定位权限，显示给网页授权的Dialog
+                mTmpOrigin = null;
+                mTmpGeolocationCallback = null;
+                showWebLocationPermissionsDialog(origin, callback);
+            } else {
+                // 没有定位权限，就去申请权限
+                mTmpOrigin = origin;
+                mTmpGeolocationCallback = callback;
+                Utils.requestPermissions(WebViewActivity.this,LOCATION_PERMISSION,REQUEST_LOCATION_PERMISSION,
+                        "权限提醒",getString(R.string.location_permission_hint));
+            }
+        }
+    }
+
     private class MyWebViewClient extends WebViewClient {
 
         @Override
@@ -242,21 +345,26 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
             super.onPageStarted(webView, s, bitmap);
             mWebProgressBar.start();
             showUrlAuthority(s);
-            Log.i("asd","onPageStarted: " + s);
+            // 阻塞图片加载
+            webView.getSettings().setBlockNetworkImage(true);
+            Log.i("asd", "onPageStarted: " + s);
         }
 
         @Override
         public void onPageFinished(WebView webView, String s) {
             super.onPageFinished(webView, s);
             mWebProgressBar.finish();
+            // 使图片可以记载
+            webView.getSettings().setBlockNetworkImage(false);
         }
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView webView, String s) {
-            if (!TextUtils.isEmpty(s)){
+            if (!TextUtils.isEmpty(s)) {
                 Uri uri = Uri.parse(s);
-                if (uri.getScheme().startsWith("http")){
-                    Log.i("asd","load: " + s);
+                String scheme = uri.getScheme();
+                if (!TextUtils.isEmpty(scheme) && scheme.toLowerCase().startsWith("http")) {
+                    Log.i("asd", "load: " + s);
                     mWebView.loadUrl(s);
                 } else {
                     Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -264,7 +372,7 @@ public class WebViewActivity extends AppCompatActivity implements RequestPermiss
                     if (intent.resolveActivity(WebViewActivity.this.getPackageManager()) != null) {
                         WebViewActivity.this.startActivity(intent);
                     }
-                    Log.i("asd","no load: " + s);
+                    Log.i("asd", "no load: " + s);
                 }
             }
             return true;

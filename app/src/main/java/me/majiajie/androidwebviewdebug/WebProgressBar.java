@@ -16,7 +16,7 @@ import android.view.View;
 /**
  * Created by mjj on 2017/9/7
  * <p>
- *     网页加载水平指示条
+ *      网页加载水平指示条
  * </p>
  */
 public class WebProgressBar extends View {
@@ -33,11 +33,11 @@ public class WebProgressBar extends View {
     private Paint mPaint;
 
     public WebProgressBar(Context context) {
-        this(context,null);
+        this(context, null);
     }
 
     public WebProgressBar(Context context, @Nullable AttributeSet attrs) {
-        this(context, attrs,0);
+        this(context, attrs, 0);
     }
 
     public WebProgressBar(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
@@ -45,7 +45,7 @@ public class WebProgressBar extends View {
         init(context);
     }
 
-    private void init(Context context){
+    private void init(Context context) {
         mRect = new Rect();
 
         mPaint = new Paint();
@@ -56,10 +56,10 @@ public class WebProgressBar extends View {
     /**
      * 开始
      */
-    public void start(){
+    public void start() {
         mIsFinish = false;
 
-        if (mStartAnim == null){
+        if (mStartAnim == null) {
             ValueAnimator animator = ValueAnimator.ofFloat(0.9f);
             animator.setDuration(5_000);
             animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
@@ -71,7 +71,7 @@ public class WebProgressBar extends View {
             mStartAnim = animator;
         }
 
-        if (mFinishAnim != null && mFinishAnim.isStarted()){
+        if (mFinishAnim != null && mFinishAnim.isStarted()) {
             mFinishAnim.cancel();
         }
 
@@ -83,10 +83,10 @@ public class WebProgressBar extends View {
     /**
      * 结束
      */
-    public void finish(){
+    public void finish() {
         mIsFinish = true;
 
-        if (mFinishAnim == null){
+        if (mFinishAnim == null) {
             ValueAnimator animator = ValueAnimator.ofFloat(1.5f);
             animator.setDuration(800);
             animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
@@ -98,11 +98,11 @@ public class WebProgressBar extends View {
             mFinishAnim = animator;
         }
 
-        if (mStartAnim != null && mStartAnim.isStarted()){
+        if (mStartAnim != null && mStartAnim.isStarted()) {
             mStartAnim.cancel();
         }
 
-        mFinishAnim.setFloatValues(mValue,1.5f);
+        mFinishAnim.setFloatValues(mValue, 1.5f);
         mFinishAnim.start();
 
         invalidate();
@@ -111,44 +111,45 @@ public class WebProgressBar extends View {
     @Override
     protected void onDraw(Canvas canvas) {
 
-        if (!mIsFinish){//开始动画不需要透明
+        if (!mIsFinish) {//开始动画不需要透明
             mPaint.setAlpha(255);
-        } else if (mValue >= 0.5f){ // 线条过半之后才使用透明度
+        } else if (mValue >= 0.5f) { // 线条过半之后才使用透明度
             mPaint.setAlpha((int) (255 * (1.5f - mValue)));
         }
 
-        int right = (int) (getWidth() * Math.min(1f,mValue));
+        int right = (int) (getWidth() * Math.min(1f, mValue));
 
-        mRect.set(0,0,right,getHeight());
-        canvas.drawRect(mRect,mPaint);
+        mRect.set(0, 0, right, getHeight());
+        canvas.drawRect(mRect, mPaint);
 
-        if ( (mStartAnim != null && mStartAnim.isStarted()) || (mFinishAnim != null && mFinishAnim.isStarted())){
+        if ((mStartAnim != null && mStartAnim.isStarted()) || (mFinishAnim != null && mFinishAnim.isStarted())) {
             invalidate();
         }
     }
 
     /**
      * 获取colorAccent的颜色,需要V7包的支持
+     *
      * @param context 上下文
      * @return 0xAARRGGBB
      */
-    private int getColorAccent(Context context){
+    private int getColorAccent(Context context) {
         Resources res = context.getResources();
-        int attrRes = res.getIdentifier("colorAccent","attr",context.getPackageName());
-        if(attrRes == 0){
+        int attrRes = res.getIdentifier("colorAccent", "attr", context.getPackageName());
+        if (attrRes == 0) {
             return 0xFF000000;
         }
-        return ContextCompat.getColor(context,getResourceId(context,attrRes));
+        return ContextCompat.getColor(context, getResourceId(context, attrRes));
     }
 
     /**
      * 获取自定义属性的资源ID
-     * @param context	上下文
-     * @param attrRes	自定义属性
-     * @return	resourceId
+     *
+     * @param context 上下文
+     * @param attrRes 自定义属性
+     * @return resourceId
      */
-    private int getResourceId(Context context, int attrRes)
-    {
+    private int getResourceId(Context context, int attrRes) {
         TypedValue typedValue = new TypedValue();
         context.getTheme().resolveAttribute(attrRes, typedValue, true);
         return typedValue.resourceId;
