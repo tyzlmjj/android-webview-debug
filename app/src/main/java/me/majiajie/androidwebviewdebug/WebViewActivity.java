@@ -4,21 +4,25 @@ import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ClipData;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -28,25 +32,34 @@ import android.webkit.WebViewClient;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.AppCompatEditText;
+import androidx.appcompat.widget.Toolbar;
+
+import java.util.HashMap;
+import java.util.Map;
+
 import me.majiajie.barcodereader.BarcodeFormat;
 import me.majiajie.barcodereader.ScanActivity;
 import me.majiajie.barcodereader.decode.DecodeResult;
 
-public class WebViewActivity extends AppCompatActivity{
+public class WebViewActivity extends AppCompatActivity {
 
     private Toolbar mToolbar;
     private WebProgressBar mWebProgressBar;
     private TextView mTvUrl;
     private TextView mTvWebviewVersion;
-    private MyWebView mWebView;
+    private WebView mWebView;
 
     /**
      * 外部存储权限相关
      */
     private final int REQUEST_EXTERNAL_STORAGE_PERMISSION = 122;
     private final String[] EXTERNAL_STORAGE_PERMISSION = {
-        Manifest.permission.READ_EXTERNAL_STORAGE,
-        Manifest.permission.WRITE_EXTERNAL_STORAGE
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
     };
 
     /**
@@ -85,6 +98,27 @@ public class WebViewActivity extends AppCompatActivity{
 
         // 显示WebView版本
         mTvWebviewVersion.setText(getString(R.string.webview_version_text, Utils.getWebViewVersion(this)));
+
+//        mWebView.loadUrl("about:blank");
+        mWebView.loadUrl("http://192.168.62.143:8001/#/course?clientcode=C1528945549IFY&operaterid=P1519803300TLO&paper_id=56&_k=euy9uq");
+//        mWebView.loadUrl("http://shopweb.yis-soft.com/#/auoutus?versionnum=2.5.2&versioncode=115");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mWebView.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mWebView.onPause();
+    }
+
+    protected void onDestroy() {
+        mWebView.destroy();
+        super.onDestroy();
     }
 
     @Override
@@ -143,6 +177,12 @@ public class WebViewActivity extends AppCompatActivity{
     }
 
     @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        menu.findItem(R.id.action_setting).setVisible(false);
+        return true;
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int itemId = item.getItemId();
         switch (itemId) {
@@ -154,6 +194,9 @@ public class WebViewActivity extends AppCompatActivity{
                 return true;
             case R.id.action_scan://扫二维码
                 ScanActivity.startActivityForResult(this, 0, new int[]{BarcodeFormat.QR_CODE});
+                return true;
+            case R.id.action_input:// 手动输入
+                showInputDialog();
                 return true;
             case R.id.action_setting://设置
 //                Intent intent = new Intent(this,SettingsActivity.class);
@@ -184,7 +227,7 @@ public class WebViewActivity extends AppCompatActivity{
             }
         }
 
-        switch (requestCode){
+        switch (requestCode) {
             case REQUEST_EXTERNAL_STORAGE_PERMISSION: {// 外部存储权限
                 if (grant && mWebFileIntent != null) {
                     startActivityForResult(mWebFileIntent, REQUEST_FILE);
@@ -198,18 +241,33 @@ public class WebViewActivity extends AppCompatActivity{
                 }
                 break;
             }
-            case REQUEST_LOCATION_PERMISSION:{// 定位权限
+            case REQUEST_LOCATION_PERMISSION: {// 定位权限
                 if (grant && !TextUtils.isEmpty(mTmpOrigin) && mTmpGeolocationCallback != null) {
                     showWebLocationPermissionsDialog(mTmpOrigin, mTmpGeolocationCallback);
                 } else {
-                    if (mTmpGeolocationCallback != null){
-                        mTmpGeolocationCallback.invoke(mTmpOrigin,false,false);
+                    if (mTmpGeolocationCallback != null) {
+                        mTmpGeolocationCallback.invoke(mTmpOrigin, false, false);
                     }
                     mTmpGeolocationCallback = null;
                     mTmpOrigin = null;
                 }
                 break;
             }
+        }
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        switch (newConfig.orientation) {
+            case Configuration.ORIENTATION_LANDSCAPE:
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                break;
+            case Configuration.ORIENTATION_PORTRAIT:
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+                break;
         }
     }
 
@@ -234,11 +292,32 @@ public class WebViewActivity extends AppCompatActivity{
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
+        //支持js调用window.open方法
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        // 允许开启多窗口
+        settings.setSupportMultipleWindows(true);
 
         // 设置 WebViewClient
         mWebView.setWebViewClient(new MyWebViewClient());
         // 设置 WebChromeClient
         mWebView.setWebChromeClient(new MyWebChromeClient());
+    }
+
+    /**
+     * 显示输入网址的提示框
+     */
+    private void showInputDialog() {
+        final InputDialogViewHolder holder = InputDialogViewHolder.newInstance(this);
+        new AlertDialog.Builder(this)
+                .setTitle("输入网址")
+                .setView(holder.itemView)
+                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String url = holder.edtUrl.getText().toString();
+                        mWebView.loadUrl(url);
+                    }
+                }).show();
     }
 
     /**
@@ -292,19 +371,74 @@ public class WebViewActivity extends AppCompatActivity{
 
     private class MyWebChromeClient extends WebChromeClient {
 
+        private View mCustomView;
+        private CustomViewCallback mCustomViewCallback;
+
+        @Override
+        public void onShowCustomView(View view, CustomViewCallback callback) {
+            super.onShowCustomView(view, callback);
+            if (mCustomView != null) {
+                callback.onCustomViewHidden();
+                return;
+            }
+            mCustomView = view;
+            ((ViewGroup)getWindow().getDecorView()).addView(mCustomView);
+            mCustomViewCallback = callback;
+            mWebView.setVisibility(View.GONE);
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        }
+
+        @Override
+        public void onHideCustomView() {
+            mWebView.setVisibility(View.VISIBLE);
+            if (mCustomView == null) {
+                return;
+            }
+            mCustomView.setVisibility(View.GONE);
+            ((ViewGroup)getWindow().getDecorView()).removeView(mCustomView);
+            mCustomViewCallback.onCustomViewHidden();
+            mCustomView = null;
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            super.onHideCustomView();
+        }
+
+        @Override
+        public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
+            WebView newWebView = new WebView(view.getContext());
+            newWebView.setWebViewClient(new WebViewClient() {
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    startActivity(browserIntent);
+                    return true;
+                }
+            });
+            WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+            transport.setWebView(newWebView);
+            resultMsg.sendToTarget();
+            return true;
+        }
+
         @TargetApi(21)
         @Override
         public boolean onShowFileChooser(WebView webView,
                                          ValueCallback<Uri[]> filePathCallback,
                                          WebChromeClient.FileChooserParams fileChooserParams) {
             mWebFilePathCallback21 = filePathCallback;
-            if (Utils.checkPermissions(WebViewActivity.this,EXTERNAL_STORAGE_PERMISSION)){
-                startActivityForResult(fileChooserParams.createIntent(), REQUEST_FILE);
+            Intent intent = fileChooserParams.createIntent();
+
+            if (intent.resolveActivity(getPackageManager()) == null) {
+                Toast.makeText(WebViewActivity.this, "不支持此操作!", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+
+            if (Utils.checkPermissions(WebViewActivity.this, EXTERNAL_STORAGE_PERMISSION)) {
+                startActivityForResult(intent, REQUEST_FILE);
             } else {
-                mWebFileIntent = fileChooserParams.createIntent();
+                mWebFileIntent = intent;
                 Utils.requestPermissions(WebViewActivity.this,
-                        EXTERNAL_STORAGE_PERMISSION,REQUEST_EXTERNAL_STORAGE_PERMISSION
-                ,"权限提醒","需要[读写手机存储]的权限才能使用此功能");
+                        EXTERNAL_STORAGE_PERMISSION, REQUEST_EXTERNAL_STORAGE_PERMISSION
+                        , "权限提醒", "需要[读写手机存储]的权限才能使用此功能");
             }
             return true;
         }
@@ -322,8 +456,7 @@ public class WebViewActivity extends AppCompatActivity{
         @Override
         public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
 
-
-            if (Utils.checkPermissions(WebViewActivity.this,LOCATION_PERMISSION)) {
+            if (Utils.checkPermissions(WebViewActivity.this, LOCATION_PERMISSION)) {
                 // 有定位权限，显示给网页授权的Dialog
                 mTmpOrigin = null;
                 mTmpGeolocationCallback = null;
@@ -332,8 +465,8 @@ public class WebViewActivity extends AppCompatActivity{
                 // 没有定位权限，就去申请权限
                 mTmpOrigin = origin;
                 mTmpGeolocationCallback = callback;
-                Utils.requestPermissions(WebViewActivity.this,LOCATION_PERMISSION,REQUEST_LOCATION_PERMISSION,
-                        "权限提醒",getString(R.string.location_permission_hint));
+                Utils.requestPermissions(WebViewActivity.this, LOCATION_PERMISSION, REQUEST_LOCATION_PERMISSION,
+                        "权限提醒", getString(R.string.location_permission_hint));
             }
         }
     }
@@ -347,14 +480,13 @@ public class WebViewActivity extends AppCompatActivity{
             showUrlAuthority(s);
             // 阻塞图片加载
             webView.getSettings().setBlockNetworkImage(true);
-            Log.i("asd", "onPageStarted: " + s);
         }
 
         @Override
         public void onPageFinished(WebView webView, String s) {
             super.onPageFinished(webView, s);
             mWebProgressBar.finish();
-            // 使图片可以记载
+            // 使图片可以加载
             webView.getSettings().setBlockNetworkImage(false);
         }
 
@@ -365,7 +497,10 @@ public class WebViewActivity extends AppCompatActivity{
                 String scheme = uri.getScheme();
                 if (!TextUtils.isEmpty(scheme) && scheme.toLowerCase().startsWith("http")) {
                     Log.i("asd", "load: " + s);
-                    mWebView.loadUrl(s);
+
+                    Map<String, String> head = new HashMap<>();
+                    head.put("Referer", webView.getOriginalUrl());
+                    mWebView.loadUrl(s, head);
                 } else {
                     Intent intent = new Intent(Intent.ACTION_VIEW);
                     intent.setData(uri);
@@ -377,5 +512,29 @@ public class WebViewActivity extends AppCompatActivity{
             }
             return true;
         }
+
+//        @TargetApi(21)
+//        @Override
+//        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+//            Log.i("asd", "request.isRedirect(): " + " " + request.getUrl().toString());
+//            return super.shouldOverrideUrlLoading(view, request);
+//        }
+    }
+
+    static class InputDialogViewHolder {
+
+        public static InputDialogViewHolder newInstance(Context context) {
+            View view = LayoutInflater.from(context).inflate(R.layout.dialog_input, null, false);
+            return new InputDialogViewHolder(view);
+        }
+
+        private View itemView;
+        private AppCompatEditText edtUrl;
+
+        private InputDialogViewHolder(View itemView) {
+            this.itemView = itemView;
+            edtUrl = itemView.findViewById(R.id.edt_url);
+        }
+
     }
 }

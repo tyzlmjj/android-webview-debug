@@ -11,6 +11,8 @@ public class APP extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        WebView.setWebContentsDebuggingEnabled(true);
+        if (BuildConfig.DEBUG) {
+            WebView.setWebContentsDebuggingEnabled(true);
+        }
     }
 }
