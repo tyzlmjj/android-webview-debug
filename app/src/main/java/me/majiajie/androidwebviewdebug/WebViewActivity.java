@@ -382,6 +382,7 @@ public class WebViewActivity extends AppCompatActivity {
                 return;
             }
             mCustomView = view;
+            mCustomView.setBackgroundColor(Color.BLACK);
             ((ViewGroup)getWindow().getDecorView()).addView(mCustomView);
             mCustomViewCallback = callback;
             mWebView.setVisibility(View.GONE);
