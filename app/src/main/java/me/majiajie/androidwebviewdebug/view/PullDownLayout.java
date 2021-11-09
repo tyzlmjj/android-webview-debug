@@ -1,4 +1,4 @@
-package me.majiajie.androidwebviewdebug;
+package me.majiajie.androidwebviewdebug.view;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
@@ -11,6 +11,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import static android.view.MotionEvent.INVALID_POINTER_ID;
+
+import me.majiajie.androidwebviewdebug.utils.DampingUtils;
 
 /**
  * Created by mjj on 2017/11/24

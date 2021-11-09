@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="me.majiajie.androidwebviewdebug.WebViewActivity">
+    tools:context="me.majiajie.androidwebviewdebug.activities.WebViewActivity">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -21,7 +21,7 @@
             android:theme="?attr/actionBarTheme"
             />
 
-        <me.majiajie.androidwebviewdebug.WebProgressBar
+        <me.majiajie.androidwebviewdebug.view.WebProgressBar
             android:id="@+id/webProgressBar"
             android:layout_width="match_parent"
             android:layout_height="2dp"
@@ -29,7 +29,7 @@
 
     </FrameLayout>
 
-    <me.majiajie.androidwebviewdebug.PullDownLayout
+    <me.majiajie.androidwebviewdebug.view.PullDownLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#222">
@@ -58,12 +58,12 @@
 
         </LinearLayout>
 
-        <me.majiajie.androidwebviewdebug.MyWebView
+        <me.majiajie.androidwebviewdebug.view.MyWebView
             android:id="@+id/webView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="#FFF" />
 
-    </me.majiajie.androidwebviewdebug.PullDownLayout>
+    </me.majiajie.androidwebviewdebug.view.PullDownLayout>
 
 </LinearLayout>

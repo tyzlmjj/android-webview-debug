@@ -1,4 +1,4 @@
-package me.majiajie.androidwebviewdebug;
+package me.majiajie.androidwebviewdebug.utils;
 
 /**
  * 下拉阻尼计算

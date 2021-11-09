@@ -24,8 +24,12 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
 
+        <!--关闭Google 安全浏览服务。 https://developer.android.com/guide/webapps/managing-webview#safe-browsing -->
+        <meta-data android:name="android.webkit.WebView.EnableSafeBrowsing"
+            android:value="false" />
+
         <activity
-            android:name=".WebViewActivity"
+            android:name=".activities.WebViewActivity"
             android:hardwareAccelerated="true"
             android:exported="true"
             android:configChanges="orientation|screenSize|keyboard">

@@ -1,4 +1,4 @@
-package me.majiajie.androidwebviewdebug;
+package me.majiajie.androidwebviewdebug.view;
 
 import android.animation.ValueAnimator;
 import android.content.Context;

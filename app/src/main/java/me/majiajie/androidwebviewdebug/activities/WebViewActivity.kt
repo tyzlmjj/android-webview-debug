@@ -1,4 +1,4 @@
-package me.majiajie.androidwebviewdebug
+package me.majiajie.androidwebviewdebug.activities
 
 import android.Manifest
 import androidx.appcompat.app.AppCompatActivity
@@ -7,7 +7,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.content.pm.PackageManager
 import android.text.TextUtils
-import android.os.Build
 import android.widget.Toast
 import android.content.pm.ActivityInfo
 import android.webkit.WebView.WebViewTransport
@@ -22,8 +21,13 @@ import android.util.Log
 import android.view.*
 import androidx.appcompat.widget.AppCompatEditText
 import android.webkit.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
+import me.majiajie.androidwebviewdebug.view.MyWebView
+import me.majiajie.androidwebviewdebug.R
+import me.majiajie.androidwebviewdebug.utils.Utils
+import me.majiajie.androidwebviewdebug.view.WebProgressBar
 import me.majiajie.barcode.scanning.ScanBarcodeContract
 import me.majiajie.barcode.scanning.bean.BarcodeFormat
 import me.majiajie.barcode.scanning.bean.ScanConfig
@@ -77,6 +81,7 @@ class WebViewActivity : AppCompatActivity() {
      */
     private var mTmpOrigin: String? = null
     private var mTmpGeolocationCallback: GeolocationPermissions.Callback? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_webview)
@@ -91,51 +96,12 @@ class WebViewActivity : AppCompatActivity() {
         mWebView.loadUrl("about:blank")
     }
 
-    override fun onResume() {
-        super.onResume()
-        mWebView.onResume()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        mWebView.onPause()
-    }
-
-    override fun onDestroy() {
-        mWebView.destroy()
-        super.onDestroy()
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode == RESULT_OK) {
-            when (requestCode) {
-                REQUEST_FILE -> {// 网页请求文件返回（api21以上）
-                    mWebFilePathCallback21 ?: return
-                    val dataString = data?.dataString
-                    val clipData = data?.clipData
-                    val results = if (clipData != null && clipData.itemCount > 0) {
-                        (0 until clipData.itemCount).map { clipData.getItemAt(it).uri }
-                            .toTypedArray()
-                    } else if (dataString != null) {
-                        arrayOf(Uri.parse(dataString))
-                    } else {
-                        null
-                    }
-                    results?.let {
-                        mWebFilePathCallback21?.onReceiveValue(it)
-                    }
-                    mWebFilePathCallback21 = null
-                }
-            }
-        } else if (resultCode == RESULT_CANCELED) {
-            when (requestCode) {
-                REQUEST_FILE -> {// 网页请求文件返回（api21以上）
-                    mWebFilePathCallback21?.onReceiveValue(null)
-                    mWebFilePathCallback21 = null
-                }
-            }
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && mWebView.canGoBack()) {
+            mWebView.goBack()
+            return true
         }
+        return super.onKeyDown(keyCode, event)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -173,11 +139,36 @@ class WebViewActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    override fun onBackPressed() {
-        if (mWebView.canGoBack()) {
-            mWebView.goBack()
-        } else {
-            super.onBackPressed()
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == RESULT_OK) {
+            when (requestCode) {
+                REQUEST_FILE -> {// 网页请求文件返回（api21以上）
+                    mWebFilePathCallback21 ?: return
+                    val dataString = data?.dataString
+                    val clipData = data?.clipData
+                    val results = if (clipData != null && clipData.itemCount > 0) {
+                        (0 until clipData.itemCount).map { clipData.getItemAt(it).uri }
+                            .toTypedArray()
+                    } else if (dataString != null) {
+                        arrayOf(Uri.parse(dataString))
+                    } else {
+                        null
+                    }
+                    results?.let {
+                        mWebFilePathCallback21?.onReceiveValue(it)
+                    }
+                    mWebFilePathCallback21 = null
+                }
+            }
+        } else if (resultCode == RESULT_CANCELED) {
+            when (requestCode) {
+                REQUEST_FILE -> {// 网页请求文件返回（api21以上）
+                    mWebFilePathCallback21?.onReceiveValue(null)
+                    mWebFilePathCallback21 = null
+                }
+            }
         }
     }
 
