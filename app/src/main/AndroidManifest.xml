@@ -27,6 +27,7 @@
         <activity
             android:name=".WebViewActivity"
             android:hardwareAccelerated="true"
+            android:exported="true"
             android:configChanges="orientation|screenSize|keyboard">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
